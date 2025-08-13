@@ -1,0 +1,501 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Panel - SHIB Earning Bot</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="css/admin.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay" class="loading-overlay">
+        <div class="loading-content">
+            <div class="loading"></div>
+            <p>অ্যাডমিন প্যানেল লোড হচ্ছে...</p>
+        </div>
+    </div>
+
+    <!-- Login Modal -->
+    <div id="loginModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>অ্যাডমিন লগইন</h2>
+            </div>
+            <form id="adminLoginForm">
+                <div class="form-group">
+                    <label class="form-label">ইমেইল</label>
+                    <input type="email" id="adminEmail" class="form-input" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">পাসওয়ার্ড</label>
+                    <input type="password" id="adminPassword" class="form-input" required>
+                </div>
+                <button type="submit" class="btn btn-primary btn-full">লগইন করুন</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Admin Panel -->
+    <div id="adminPanel" style="display: none;">
+        <!-- Header -->
+        <header class="admin-header">
+            <div class="admin-header-content">
+                <h1 id="adminAppName">SHIB Earning Bot - Admin Panel</h1>
+                <div class="admin-header-actions">
+                    <button class="btn btn-secondary" onclick="refreshData()">রিফ্রেশ</button>
+                    <button class="btn btn-primary" onclick="logout()">লগআউট</button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Navigation -->
+        <nav class="admin-nav">
+            <div class="admin-nav-content">
+                <button class="admin-nav-item active" onclick="showAdminTab('dashboard')">ড্যাশবোর্ড</button>
+                <button class="admin-nav-item" onclick="showAdminTab('users')">ব্যবহারকারী</button>
+                <button class="admin-nav-item" onclick="showAdminTab('withdrawals')">উইথড্র</button>
+                <button class="admin-nav-item" onclick="showAdminTab('subscriptions')">সাবস্ক্রিপশন</button>
+                <button class="admin-nav-item" onclick="showAdminTab('settings')">সেটিংস</button>
+                <button class="admin-nav-item" onclick="showAdminTab('customization')">কাস্টমাইজেশন</button>
+                <button class="admin-nav-item" onclick="showAdminTab('ads')">বিজ্ঞাপন</button>
+                <button class="admin-nav-item" onclick="showAdminTab('tasks')">টাস্ক</button>
+            </div>
+        </nav>
+
+        <!-- Main Content -->
+        <main class="admin-main">
+            <!-- Dashboard Tab -->
+            <div id="dashboardTab" class="admin-tab-content">
+                <div class="admin-stats-grid">
+                    <div class="admin-stat-card">
+                        <div class="stat-icon">👥</div>
+                        <div class="stat-info">
+                            <div class="stat-value" id="totalUsers">0</div>
+                            <div class="stat-label">মোট ব্যবহারকারী</div>
+                        </div>
+                    </div>
+                    <div class="admin-stat-card">
+                        <div class="stat-icon">💰</div>
+                        <div class="stat-info">
+                            <div class="stat-value" id="totalCoins">0</div>
+                            <div class="stat-label">মোট কয়েন</div>
+                        </div>
+                    </div>
+                    <div class="admin-stat-card">
+                        <div class="stat-icon">📤</div>
+                        <div class="stat-info">
+                            <div class="stat-value" id="pendingWithdrawals">0</div>
+                            <div class="stat-label">পেন্ডিং উইথড্র</div>
+                        </div>
+                    </div>
+                    <div class="admin-stat-card">
+                        <div class="stat-icon">📺</div>
+                        <div class="stat-info">
+                            <div class="stat-value" id="totalAdsWatched">0</div>
+                            <div class="stat-label">মোট বিজ্ঞাপন</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="admin-charts">
+                    <div class="chart-container">
+                        <h3>ব্যবহারকারী বৃদ্ধি</h3>
+                        <canvas id="userGrowthChart"></canvas>
+                    </div>
+                    <div class="chart-container">
+                        <h3>দৈনিক আয়</h3>
+                        <canvas id="earningsChart"></canvas>
+                    </div>
+                </div>
+
+                <div class="recent-activity">
+                    <h3>সাম্প্রতিক কার্যকলাপ</h3>
+                    <div id="recentActivity" class="activity-list"></div>
+                </div>
+            </div>
+
+            <!-- Users Tab -->
+            <div id="usersTab" class="admin-tab-content" style="display: none;">
+                <div class="admin-section-header">
+                    <h2>ব্যবহারকারী ব্যবস্থাপনা</h2>
+                    <div class="admin-actions">
+                        <input type="text" id="userSearch" placeholder="ব্যবহারকারী খুঁজুন..." class="form-input">
+                        <button class="btn btn-primary" onclick="searchUsers()">খুঁজুন</button>
+                    </div>
+                </div>
+                <div id="usersList" class="users-list"></div>
+            </div>
+
+            <!-- Withdrawals Tab -->
+            <div id="withdrawalsTab" class="admin-tab-content" style="display: none;">
+                <div class="admin-section-header">
+                    <h2>উইথড্র অনুরোধ</h2>
+                    <div class="admin-actions">
+                        <select id="withdrawalFilter" class="form-input">
+                            <option value="all">সব</option>
+                            <option value="pending">পেন্ডিং</option>
+                            <option value="approved">অনুমোদিত</option>
+                            <option value="rejected">প্রত্যাখ্যাত</option>
+                        </select>
+                    </div>
+                </div>
+                <div id="withdrawalsList" class="withdrawals-list"></div>
+            </div>
+
+            <!-- Subscriptions Tab -->
+            <div id="subscriptionsTab" class="admin-tab-content" style="display: none;">
+                <div class="admin-section-header">
+                    <h2>সাবস্ক্রিপশন ব্যবস্থাপনা</h2>
+                    <div class="admin-actions">
+                        <select id="subscriptionFilter" class="form-input">
+                            <option value="all">সব</option>
+                            <option value="pending">পেন্ডিং</option>
+                            <option value="approved">অনুমোদিত</option>
+                            <option value="rejected">প্রত্যাখ্যাত</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Subscription Statistics -->
+                <div class="subscription-stats">
+                    <div class="admin-stat-card">
+                        <div class="stat-icon">⭐</div>
+                        <div class="stat-info">
+                            <div class="stat-value" id="totalPremiumUsers">0</div>
+                            <div class="stat-label">প্রিমিয়াম ব্যবহারকারী</div>
+                        </div>
+                    </div>
+                    <div class="admin-stat-card">
+                        <div class="stat-icon">✓</div>
+                        <div class="stat-info">
+                            <div class="stat-value" id="totalBlueTickUsers">0</div>
+                            <div class="stat-label">ব্লু টিক ব্যবহারকারী</div>
+                        </div>
+                    </div>
+                    <div class="admin-stat-card">
+                        <div class="stat-icon">⏳</div>
+                        <div class="stat-info">
+                            <div class="stat-value" id="pendingSubscriptions">0</div>
+                            <div class="stat-label">পেন্ডিং রিকুয়েস্ট</div>
+                        </div>
+                    </div>
+                    <div class="admin-stat-card">
+                        <div class="stat-icon">💵</div>
+                        <div class="stat-info">
+                            <div class="stat-value" id="subscriptionRevenue">0</div>
+                            <div class="stat-label">সাবস্ক্রিপশন আয়</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Subscription Requests -->
+                <div class="card">
+                    <div class="card-header">
+                        <h3>সাবস্ক্রিপশন রিকুয়েস্ট</h3>
+                    </div>
+                    <div id="subscriptionRequestsList" class="subscription-requests-list">
+                        <!-- Subscription requests will be loaded here -->
+                    </div>
+                </div>
+
+                <!-- Subscription Plans Management -->
+                <div class="card">
+                    <div class="card-header">
+                        <h3>সাবস্ক্রিপশন প্ল্যান</h3>
+                    </div>
+                    <div class="subscription-plans-admin">
+                        <div class="plan-admin-item">
+                            <h4>প্রিমিয়াম প্ল্যান</h4>
+                            <div class="form-group">
+                                <label class="form-label">মূল্য (কয়েন)</label>
+                                <input type="number" id="premiumPrice" class="form-input" value="500">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">সময়কাল (দিন)</label>
+                                <input type="number" id="premiumDuration" class="form-input" value="30">
+                            </div>
+                        </div>
+                        <div class="plan-admin-item">
+                            <h4>ব্লু টিক প্ল্যান</h4>
+                            <div class="form-group">
+                                <label class="form-label">মূল্য (টাকা)</label>
+                                <input type="number" id="blueTickPrice" class="form-input" value="200">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">সময়কাল (দিন)</label>
+                                <input type="number" id="blueTickDuration" class="form-input" value="365">
+                            </div>
+                        </div>
+                    </div>
+                    <button class="btn btn-primary" onclick="updateSubscriptionPlans()">প্ল্যান আপডেট করুন</button>
+                </div>
+            </div>
+
+            <!-- Settings Tab -->
+            <div id="settingsTab" class="admin-tab-content" style="display: none;">
+                <div class="admin-section-header">
+                    <h2>অ্যাপ সেটিংস</h2>
+                </div>
+                <div class="settings-grid">
+                    <div class="settings-card">
+                        <h3>আয় সেটিংস</h3>
+                        <div class="form-group">
+                            <label class="form-label">দৈনিক বোনাস</label>
+                            <input type="number" id="dailyBonus" class="form-input">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">রেফারেল বোনাস</label>
+                            <input type="number" id="referralBonus" class="form-input">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">বিজ্ঞাপন পুরস্কার</label>
+                            <input type="number" id="adReward" class="form-input">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">সর্বনিম্ন উইথড্র</label>
+                            <input type="number" id="minWithdrawal" class="form-input">
+                        </div>
+                    </div>
+
+                    <div class="settings-card">
+                        <h3>সীমা সেটিংস</h3>
+                        <div class="form-group">
+                            <label class="form-label">দৈনিক বিজ্ঞাপন সীমা</label>
+                            <input type="number" id="dailyAdLimit" class="form-input">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">দৈনিক আয় সীমা</label>
+                            <input type="number" id="dailyEarnLimit" class="form-input">
+                        </div>
+                    </div>
+
+                    <div class="settings-card">
+                        <h3>পেমেন্ট মেথড</h3>
+                        <div id="paymentMethods" class="payment-methods">
+                            <div class="payment-method">
+                                <input type="checkbox" id="bkash" checked>
+                                <label for="bkash">bKash</label>
+                            </div>
+                            <div class="payment-method">
+                                <input type="checkbox" id="nagad" checked>
+                                <label for="nagad">Nagad</label>
+                            </div>
+                            <div class="payment-method">
+                                <input type="checkbox" id="rocket">
+                                <label for="rocket">Rocket</label>
+                            </div>
+                        </div>
+                        <button class="btn btn-secondary" onclick="addPaymentMethod()">নতুন মেথড যোগ করুন</button>
+                    </div>
+                </div>
+                <button class="btn btn-primary btn-full" onclick="saveSettings()">সেটিংস সেভ করুন</button>
+            </div>
+
+            <!-- Customization Tab -->
+            <div id="customizationTab" class="admin-tab-content" style="display: none;">
+                <div class="admin-section-header">
+                    <h2>ডিজাইন কাস্টমাইজেশন</h2>
+                </div>
+                <div class="customization-grid">
+                    <div class="customization-card">
+                        <h3>অ্যাপ তথ্য</h3>
+                        <div class="form-group">
+                            <label class="form-label">অ্যাপের নাম</label>
+                            <input type="text" id="appName" class="form-input">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">কয়েনের নাম</label>
+                            <input type="text" id="coinName" class="form-input">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">কয়েন সিম্বল</label>
+                            <input type="text" id="coinSymbol" class="form-input">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">কয়েন লোগো URL</label>
+                            <input type="url" id="coinLogo" class="form-input">
+                        </div>
+                    </div>
+
+                    <div class="customization-card">
+                        <h3>রঙ সেটিংস</h3>
+                        <div class="color-grid">
+                            <div class="form-group">
+                                <label class="form-label">প্রাথমিক রঙ</label>
+                                <input type="color" id="primaryColor" class="color-input">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">দ্বিতীয় রঙ</label>
+                                <input type="color" id="secondaryColor" class="color-input">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">অ্যাকসেন্ট রঙ</label>
+                                <input type="color" id="accentColor" class="color-input">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">ব্যাকগ্রাউন্ড রঙ</label>
+                                <input type="color" id="backgroundColor" class="color-input">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">টেক্সট রঙ</label>
+                                <input type="color" id="textColor" class="color-input">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="customization-card">
+                        <h3>প্রিভিউ</h3>
+                        <div id="designPreview" class="design-preview">
+                            <div class="preview-header">
+                                <h4 id="previewAppName">SHIB Earning Bot</h4>
+                            </div>
+                            <div class="preview-card">
+                                <div class="preview-balance">
+                                    <span id="previewCoinName">SHIB</span>: 1,500
+                                </div>
+                                <button class="preview-button">নমুনা বাটন</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <button class="btn btn-primary btn-full" onclick="saveCustomization()">কাস্টমাইজেশন সেভ করুন</button>
+            </div>
+
+            <!-- Ads Tab -->
+            <div id="adsTab" class="admin-tab-content" style="display: none;">
+                <div class="admin-section-header">
+                    <h2>বিজ্ঞাপন ব্যবস্থাপনা</h2>
+                </div>
+                
+                <!-- Ad Statistics -->
+                <div class="card">
+                    <div class="card-header">
+                        <h3>বিজ্ঞাপন পরিসংখ্যান</h3>
+                    </div>
+                    <div id="adStatistics">
+                        <!-- Statistics will be loaded here -->
+                    </div>
+                </div>
+
+                <div class="ads-settings">
+                    <div class="settings-card">
+                        <h3>Monetag সেটিংস</h3>
+                        <div class="form-group">
+                            <label class="form-label">Zone ID</label>
+                            <input type="text" id="monetagZoneId" class="form-input">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">অটো বিজ্ঞাপন ইন্টারভাল (সেকেন্ড)</label>
+                            <input type="number" id="autoAdInterval" class="form-input" min="60" max="300">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">বিজ্ঞাপন ফ্রিকোয়েন্সি</label>
+                            <input type="number" id="adFrequency" class="form-input" min="1" max="10">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">ক্লিক বিজ্ঞাপনের সম্ভাবনা (0.1 = 10%)</label>
+                            <input type="number" id="clickAdChance" class="form-input" min="0" max="1" step="0.1" value="0.1">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">সেশন শুরুর পর প্রথম বিজ্ঞাপন (সেকেন্ড)</label>
+                            <input type="number" id="minSessionTime" class="form-input" min="10" max="120" value="30">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">প্রতি সেশনে সর্বোচ্চ বিজ্ঞাপন</label>
+                            <input type="number" id="maxAdsPerSession" class="form-input" min="1" max="20" value="10">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">
+                                <input type="checkbox" id="showAds"> বিজ্ঞাপন চালু করুন
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="settings-card">
+                        <h3>নতুন বিজ্ঞাপন নেটওয়ার্ক যোগ করুন</h3>
+                        <div class="form-group">
+                            <label class="form-label">নেটওয়ার্কের নাম</label>
+                            <input type="text" id="newAdNetwork" class="form-input" placeholder="যেমন: AdsTerra">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">স্ক্রিপ্ট URL</label>
+                            <input type="url" id="newAdScript" class="form-input" placeholder="https://example.com/ads.js">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Zone/Publisher ID</label>
+                            <input type="text" id="newAdZoneId" class="form-input" placeholder="123456">
+                        </div>
+                        <button class="btn btn-secondary" onclick="addAdNetwork()">নেটওয়ার্ক যোগ করুন</button>
+                    </div>
+
+                    <div class="settings-card">
+                        <h3>বিজ্ঞাপন নিয়ন্ত্রণ</h3>
+                        <div class="btn-group">
+                            <button class="btn btn-success" onclick="resumeAds()">বিজ্ঞাপন চালু করুন</button>
+                            <button class="btn btn-warning" onclick="pauseAds()">বিজ্ঞাপন বন্ধ করুন</button>
+                            <button class="btn btn-primary" onclick="testAd()">টেস্ট বিজ্ঞাপন</button>
+                        </div>
+                    </div>
+                </div>
+                <button class="btn btn-primary btn-full" onclick="saveAdSettings()">বিজ্ঞাপন সেটিংস সেভ করুন</button>
+            </div>
+
+            <!-- Tasks Tab -->
+            <div id="tasksTab" class="admin-tab-content" style="display: none;">
+                <div class="admin-section-header">
+                    <h2>টাস্ক ব্যবস্থাপনা</h2>
+                    <button class="btn btn-primary" onclick="addNewTask()">নতুন টাস্ক যোগ করুন</button>
+                </div>
+                <div id="tasksList" class="tasks-list"></div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Task Modal -->
+    <div id="taskModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="taskModalTitle">নতুন টাস্ক যোগ করুন</h3>
+                <button class="modal-close" onclick="closeTaskModal()">&times;</button>
+            </div>
+            <form id="taskForm">
+                <div class="form-group">
+                    <label class="form-label">টাস্কের নাম</label>
+                    <input type="text" id="taskTitle" class="form-input" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">বিবরণ</label>
+                    <textarea id="taskDescription" class="form-input" rows="3"></textarea>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">পুরস্কার</label>
+                    <input type="number" id="taskReward" class="form-input" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">টাইপ</label>
+                    <select id="taskType" class="form-input">
+                        <option value="daily">দৈনিক</option>
+                        <option value="repeatable">পুনরাবৃত্তিযোগ্য</option>
+                        <option value="one-time">একবার</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">আইকন</label>
+                    <input type="text" id="taskIcon" class="form-input" placeholder="🎁">
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeTaskModal()">বাতিল</button>
+                    <button type="submit" class="btn btn-primary">সেভ করুন</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="components/ui/chart.js"></script>
+    <script src="js/database.js"></script>
+    <script src="js/admin.js"></script>
+</body>
+</html>
